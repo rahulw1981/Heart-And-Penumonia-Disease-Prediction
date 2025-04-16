@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pneumonia and Heart Disease Prediction</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #ecf0f1;
+            --text-color: #34495e;
+            --border-color: #bdc3c7;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --card-background: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            background-color: var(--card-background);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            padding: 30px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        select, .btn, input[type="checkbox"] {
+            margin-top: 15px;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .file-input-wrapper {
+            margin-top: 20px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            border: 2px dashed var(--primary-color);
+            border-radius: 15px;
+            cursor: pointer;
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        .file-label:hover {
+            background-color: rgba(52, 152, 219, 0.2);
+        }
+
+        .file-label svg {
+            width: 64px;
+            height: 64px;
+            fill: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .file-label span {
+            font-size: 16px;
+            color: var(--primary-color);
+        }
+
+        #image-preview {
+            max-width: 100%;
+            margin-top: 20px;
+            display: none;
+            border-radius: 10px;
+            border: 2px solid var(--border-color);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: none;
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: rgba(46, 204, 113, 0.1);
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .confidence-bar {
+            height: 20px;
+            background-color: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            transition: width 0.5s ease;
+        }
+
+        #result-image {
+            margin-top: 20px;
+            max-width: 100%;
+            border-radius: 10px;
+        }
+
+        .checkbox-container {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Disease Prediction</h1>
+        <form id="upload-form">
+            <select id="type" name="type" required>
+                <option value="">Select Analysis Type</option>
+                <option value="pneumonia">Pneumonia</option>
+                <option value="heart">Heart Disease</option>
+            </select>
+
+            <div class="file-input-wrapper" style="display: none;">
+                <input type="file" id="file" name="file" class="file-input" accept=".png,.jpg,.jpeg" required>
+                <label for="file" class="file-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                    <span>Upload Image</span>
+                </label>
+            </div>
+
+            <img id="image-preview" alt="Preview">
+
+            <div class="checkbox-container">
+                <label><input type="checkbox" id="download-pdf" name="download_pdf"> Download result as PDF</label>
+            </div>
+
+            <button type="submit" id="predict-btn" class="btn" style="display: none;">Analyze</button>
+        </form>
+
+        <div class="loading" id="loading">Analyzing...</div>
+        <div class="result-container" id="result-container"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const typeSelect = document.getElementById('type');
+        const fileInputWrapper = document.querySelector('.file-input-wrapper');
+        const fileInput = document.getElementById('file');
+        const imagePreview = document.getElementById('image-preview');
+        const resultContainer = document.getElementById('result-container');
+        const predictBtn = document.getElementById('predict-btn');
+        const loading = document.getElementById('loading');
+        const downloadCheckbox = document.getElementById('download-pdf');
+
+        typeSelect.addEventListener('change', () => {
+            const show = !!typeSelect.value;
+            fileInputWrapper.style.display = show ? 'block' : 'none';
+            predictBtn.style.display = show ? 'block' : 'none';
+        });
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.style.display = 'none';
+            }
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const wantsPDF = downloadCheckbox.checked;
+
+            if (wantsPDF) {
+                formData.set('download_pdf', 'true');
+            }
+
+            predictBtn.disabled = true;
+            loading.style.display = 'block';
+            resultContainer.innerHTML = '';
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                if (wantsPDF) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'prediction_result.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } else {
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error);
+                    const confidence = (data.confidence * 100).toFixed(2);
+                    resultContainer.innerHTML = `
+                        <h2>Analysis Result</h2>
+                        <p><strong>Prediction:</strong> ${data.prediction}</p>
+                        <p><strong>Confidence:</strong> ${confidence}%</p>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: ${confidence}%"></div>
+                        </div>
+                        <img id="result-image" src="${data.image_url}" alt="Analyzed Image">
+                    `;
+                }
+            })
+            .catch(error => {
+                resultContainer.textContent = 'An error occurred: ' + error.message;
+            })
+            .finally(() => {
+                predictBtn.disabled = false;
+                loading.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>

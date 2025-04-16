@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pneumonia Prediction</title>
+    <style>
+        :root {
+            --primary-color: #095d7e;
+            --secondary-color: #14967f;
+            --background-color: #f1f9ff;
+            --accent-color: #e2fcd6;
+            --text-color: #095d7e;
+            --card-bg: #ffffff;
+            --border-color: #ccecee;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', 'Arial', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 4px 6px rgba(9, 93, 126, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-align: center;
+            color: var(--primary-color);
+            font-weight: 300;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-label:hover, .file-label.highlight {
+            border-color: var(--secondary-color);
+            background-color: var(--accent-color);
+        }
+
+        .file-label svg {
+            width: 48px;
+            height: 48px;
+            fill: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+
+        .file-label span {
+            font-size: 1rem;
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        #image-preview {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-color);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #result-container {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 4px;
+            animation: fadeIn 0.5s ease-out;
+            background-color: var(--accent-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .loading {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+        }
+
+        .loading::after {
+            content: "";
+            width: 30px;
+            height: 30px;
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            font-weight: 300;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(9, 93, 126, 0.1);
+        }
+
+        .result-label {
+            font-weight: 500;
+        }
+
+        .result-value {
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+
+        .confidence-bar {
+            height: 8px;
+            background-color: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background-color: var(--secondary-color);
+            transition: width 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 500px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .file-label {
+                padding: 20px;
+            }
+
+            .file-label svg {
+                width: 36px;
+                height: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pneumonia Prediction</h1>
+        <form id="upload-form">
+            <div class="file-input-wrapper">
+                <input type="file" id="file" name="file" class="file-input" accept=".png,.jpg,.jpeg" required>
+                <label for="file" class="file-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                    <span>Upload X-ray Image</span>
+                    <span>PNG, JPG, JPEG up to 10MB</span>
+                </label>
+            </div>
+            <img id="image-preview" alt="X-ray preview">
+            <button type="submit" id="predict-btn" class="btn">Analyze X-ray</button>
+        </form>
+        <div class="loading" id="loading"></div>
+        <div id="result-container"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('upload-form');
+            const fileInput = document.getElementById('file');
+            const imagePreview = document.getElementById('image-preview');
+            const resultContainer = document.getElementById('result-container');
+            const predictBtn = document.getElementById('predict-btn');
+            const loading = document.getElementById('loading');
+
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(form);
+                predictBtn.disabled = true;
+                loading.style.display = 'flex';
+                resultContainer.textContent = '';
+
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    const confidencePercentage = (data.confidence * 100).toFixed(2);
+                    resultContainer.innerHTML = `
+                        <h2 class="result-title">Analysis Result</h2>
+                        <div class="result-item">
+                            <span class="result-label">Prediction:</span>
+                            <span class="result-value">${data.prediction}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Confidence:</span>
+                            <span class="result-value">${confidencePercentage}%</span>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: ${confidencePercentage}%"></div>
+                        </div>
+                        <img src="${data.image_url}" alt="Analyzed X-ray" style="max-width: 100%; border-radius: 4px; margin-top: 20px; border: 1px solid var(--border-color);">
+                    `;
+                })
+                .catch(error => {
+                    resultContainer.textContent = 'An error occurred during the analysis. Please try again.';
+                })
+                .finally(() => {
+                    predictBtn.disabled = false;
+                    loading.style.display = 'none';
+                });
+            });
+
+            // Drag and drop functionality
+            const dropZone = document.querySelector('.file-label');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight(e) {
+                dropZone.classList.add('highlight');
+            }
+
+            function unhighlight(e) {
+                dropZone.classList.remove('highlight');
+            }
+
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                fileInput.files = files;
+                handleFiles(files);
+            }
+
+            function handleFiles(files) {
+                if (files.length > 0) {
+                    const file = files[0];
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                    }
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
